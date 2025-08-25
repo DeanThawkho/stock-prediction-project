@@ -1,0 +1,8 @@
+Flask
+pandas
+pandas-datareader
+scikit-learn
+matplotlib
+numpy
+gunicorn
+setuptools

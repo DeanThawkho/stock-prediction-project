@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Price Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <h1>Predict Stock Price</h1>
+
+    <form id="predictionForm">
+        <label>Stock Symbol:</label>
+        <input type="text" id="symbol" required><br><br>
+
+        <label>Select Prediction Date (1–7 days ahead):</label>
+        <input type="date" id="pred_date" required><br><br>
+
+        <button type="submit">Predict</button>
+    </form>
+
+    <h3 id="status"></h3>
+    <h3 id="result"></h3>
+    <img id="plot" style="max-width: 100%; margin-top: 20px;" />
+
+    <script>
+        // --- NEW: restrict date-picker from today to today+7 ---
+        const dateInput = document.getElementById('pred_date');
+        const today = new Date();
+        const isoToday = today.toISOString().split('T')[0];
+        const maxDate = new Date(today);
+        maxDate.setDate(maxDate.getDate() + 6);
+        const isoMax = maxDate.toISOString().split('T')[0];
+        dateInput.min = isoToday;
+        dateInput.max = isoMax;
+        // ------------------------------------------------------
+
+        document.getElementById('predictionForm').onsubmit = async function (e) {
+            e.preventDefault();
+            const symbol = document.getElementById('symbol').value;
+            const predDate = new Date(document.getElementById('pred_date').value);
+            const today = new Date();
+            const daysAhead = Math.floor((predDate - today) / (1000 * 60 * 60 * 24));
+
+            if (daysAhead < 0 || daysAhead > 6) {
+                document.getElementById('status').innerText = "⚠️ Date must be within 1 to 7 days from today.";
+                return;
+            }
+
+            document.getElementById('status').innerText = "🔄 Predicting...";
+            document.getElementById('result').innerText = "";
+            document.getElementById('plot').src = "";
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: symbol, days: daysAhead })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                document.getElementById('status').innerText = "✅ Prediction complete!";
+                document.getElementById('result').innerText = `📈 Predicted price: ${data.predicted_price.toFixed(2)}`;
+                document.getElementById('plot').src = 'data:image/png;base64,' + data.plot;
+            } catch (err) {
+                document.getElementById('status').innerText = "❌ Failed to predict. Please check the symbol and try again.";
+                console.error(err);
+            }
+        };
+    </script>
+
+</body>
+</html>
